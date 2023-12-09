@@ -21,11 +21,12 @@
 
 // Current concerns: not sure how the grabnext/pass is gonna be working; should everything be in an always block set off by a change in cword? 
 
-module checker(pass, fail, npassed, cletter, nxtletter, kstrk, kr, cword, clk);
+module checker(pass, fail, npassed, cletter, nxtletter, kstrk, kr, cword, clk, reset);
     input kr; //key release
     input [4:0] kstrk; //data from one key stroke
     input [19:0] cword; //current word from big word reg
     input clk; 
+    input reset; // reset
     
     output reg [5:0] npassed; //increments every passed word
    /* Im not sure this is gonna work if we're incrementing it in here, depending on how getting the next word works we might need to increment in top or in some module that is between top 
@@ -52,6 +53,8 @@ module checker(pass, fail, npassed, cletter, nxtletter, kstrk, kr, cword, clk);
                   nxtletter = cletter+1;
                 else
                   nxtletter = failstate;
+              pass = 0;
+              fail = 0;
               end
           L2: begin
               ccrctlet = cword[5:9];
@@ -60,6 +63,8 @@ module checker(pass, fail, npassed, cletter, nxtletter, kstrk, kr, cword, clk);
                 else
                   nxtletter = failstate;
               end
+              pass = 0;
+              fail = 0;
           L3: begin
               ccrctlet = cword[10:14];
                 if(kstrk == ccrctlet)
@@ -67,6 +72,8 @@ module checker(pass, fail, npassed, cletter, nxtletter, kstrk, kr, cword, clk);
                 else
                   nxtletter = failstate;
               end
+              pass = 0;
+              fail = 0;
           L4: begin
               ccrctlet = cword[15:19];
                 if(kstrk == ccrctlet)begin
@@ -76,17 +83,22 @@ module checker(pass, fail, npassed, cletter, nxtletter, kstrk, kr, cword, clk);
                   end
                 else 
                   nxtletter = failstate;
-                  
-               
+              fail = 0;
               end
            failstate: begin
              //I dont know what we need from here besides this
-             //Should cletter go back to L1? 
+             //Should cletter go back to L1?
+             nxtletter = failstate;
              fail = 1;
+             pass = 0;
               end
         endcase  
  
-   always @(posedge clk)
-   cletter = nxtletter;
+  always @(posedge clk) begin
+    if (reset)
+      cletter = L1;
+    else
+      cletter = nxtletter;
+   end
 
 endmodule
