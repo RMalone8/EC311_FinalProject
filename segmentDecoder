@@ -1,6 +1,6 @@
 module alphabet_display_16 (
-    input [6:0] char,
-    output reg [13:0] segments
+    input [4:0] char,
+    output reg [15:0] segments
 );
 
     always @(char) begin
