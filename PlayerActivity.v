@@ -22,7 +22,6 @@
 
 module PlayerActivity(
     currentWord,
-    nextWord,
     keystroke,
     keyReleased,
     
