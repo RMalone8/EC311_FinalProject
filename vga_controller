@@ -1,0 +1,104 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 12/09/2023 03:02:50 PM
+// Design Name: 
+// Module Name: vga
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module vga_controller(clk_100MHz, reset, hsync, vsync, xpos, ypos);
+
+input clk_100MHz;
+input reset;
+output hsync;
+output vsync;
+output [9:0] xpos;
+output [9:0] ypos;
+
+parameter hDepth = 640, hFront = 48, hBack = 16, hPulse = 96;
+parameter hMax = hDepth + hFront + hBack + hPulse;
+parameter vDepth = 480, vFront = 10, vBack = 33, vPulse = 2;
+parameter vMax = vDepth + vFront + vBack + vPulse;
+
+reg [9:0] hCountReg, hCountNext, vCountReg, vCountNext;
+
+wire clk_25MHz;
+reg [1:0] r_clk_25MHz;
+
+initial r_clk_25MHz <= 0;
+
+always @ (posedge clk_100MHz, reset)
+    if (reset)
+        r_clk_25MHz <= 0;
+    else
+        r_clk_25MHz <= r_clk_25MHz + 1;
+
+assign clk_25MHz = (r_clk_25MHz == 0) ? 1 : 0;
+
+reg vSyncReg, hSyncReg;
+wire vSyncNext, hSyncNext;
+
+always @(posedge clk_100MHz, reset)
+        if (reset) begin
+            vCountReg <= 0;
+            hCountReg <= 0;
+            vSyncReg  <= 1'b0;
+            hSyncReg  <= 1'b0;
+        end
+        else begin
+            vCountReg <= vCountNext;
+            hCountReg <= hCountNext;
+            vSyncReg  <= vSyncNext;
+            hSyncReg  <= hSyncNext;
+        end
+
+always @(posedge clk_25MHz, reset)
+        if(reset)
+            hCountNext = 0;
+        else
+            if(hCountReg == hMax)
+                hCountReg = 0;
+            else
+                hCountReg = hCountReg + 1;    
+
+                
+    always @(posedge clk_25MHz, reset)
+        if(reset)
+            vCountNext = 0;
+        else
+            if(hCountReg == hMax)
+                if((vCountReg == vMax))
+                    vCountNext = 0;
+                else
+                    vCountNext = vCountReg + 1;
+        
+
+    assign hSyncNext = (hCountReg >= (hDepth+hBack) && hCountReg <= (hDepth+hBack+hPulse-1));
+    
+
+    assign vSyncNext = (vCountReg >= (vDepth+vBack) && vCountReg <= (vDepth+vBack+vPulse-1));
+            
+
+    assign hsync  = hSyncReg;
+    assign vsync  = vSyncReg;
+    assign xpos      = hCountReg;
+    assign ypos      = vCountReg;
+    //assign p_tick = clk_25MHz;
+
+
+
+endmodule
