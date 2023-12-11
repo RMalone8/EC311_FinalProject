@@ -1,0 +1,117 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:
+// Engineer:
+//
+// Create Date: 12/09/2023 03:51:18 PM
+// Design Name:
+// Module Name: letter_gen
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module letter_gen(
+    input [9:0] xpos,
+    input [9:0] ypos,
+    input [9:0] basex,
+    input [9:0] basey,
+    input [15:0] encoding,
+    inout [3:0] red,
+    inout [3:0] blue,
+    inout [3:0] green,
+    output change
+    );
+   
+parameter width = 20, length = 40, doubleWidth = 40, tripleWidth = 60, doubleLength = 80;
+   
+reg [4:0] red_reg;
+reg [4:0] blue_reg;
+reg [4:0] green_reg;
+
+reg change_reg;
+
+initial change_reg = 0;
+
+
+
+always @ (xpos, ypos) begin
+    if (xpos > basex + width && xpos < basex + length + width && ypos > basey && ypos < basey + width && encoding[15] == 1) begin // 0
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex && xpos < basex + width && ypos > basey + width && ypos < basey + length + width && encoding[14] == 1) begin // 1
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex && xpos < basex + width && ypos > basey + length + width && ypos < basey + doubleLength + width && encoding[13] == 1) begin // 2
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex + width && xpos < basex + length + width && ypos > basey + doubleLength + width && ypos < basey + doubleLength + doubleWidth && encoding[12] == 1) begin // 3
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex + width + length && xpos < basex + doubleLength + width && ypos > basey + doubleLength + width && ypos < basey + doubleLength + doubleWidth && encoding[11] == 1) begin // 4
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex + doubleLength + width && xpos < basex + doubleLength + doubleWidth && ypos > basey + length + width && ypos < basey + doubleLength + width && encoding[10] == 1) begin // 5
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex + doubleLength + width && xpos < basex + doubleLength + doubleWidth &&  ypos > basey + width && ypos < basey + length + width && encoding[9] == 1) begin // 6
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex + width + length && xpos < basex + doubleLength + width && ypos > basey && ypos < basey + width && encoding[8] == 1) begin // 7
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else if (xpos > basex + length/2 && xpos < basex + length/2 + width && ypos > basey + width && ypos < basey + length + width && encoding[7] == 1) begin // 8
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     if (xpos > basex + width && xpos < basex + length + width && ypos > basey && ypos < basey + width && encoding[6] == 1) begin // 9
+        red_reg <= 4'hF;
+        blue_reg <= 0;
+        green_reg <= 0;
+        change_reg <= 1;
+     end
+     else
+        change_reg <= 0;
+end
+
+assign red = (change_reg == 1) ? red_reg : red;
+assign blue = (change_reg == 1) ? blue_reg : blue;
+assign green = (change_reg == 1) ? green_reg : green;
+assign change = change_reg;
+
+endmodule
