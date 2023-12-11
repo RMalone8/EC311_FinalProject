@@ -31,7 +31,6 @@ module PlayerActivity(
     );
     
     input [19:0] currentWord;
-    input [19:0] nextWord;
     input [4:0] keystroke;
     input keyReleased;
     
