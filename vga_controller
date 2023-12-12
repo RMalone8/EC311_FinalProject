@@ -121,22 +121,22 @@ reg clock;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 && horizontal_position < basex1 + width && vertical_position > basey1 + length + width && vertical_position < basey1 + doubleLength + width && let_code_1[13] == 1) begin // 2
+                     else if (horizontal_position > basex1 && horizontal_position < basex1 + width && vertical_position > basey1 + length + doubleWidth && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[13] == 1) begin // 2
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 + width && horizontal_position < basex1 + length + width && vertical_position > basey1 + doubleLength + width && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[12] == 1) begin // 3
+                     else if (horizontal_position > basex1 + width && horizontal_position < basex1 + length + width && vertical_position > basey1 + doubleLength + doubleWidth && vertical_position < basey1 + doubleLength + tripleWidth && let_code_1[12] == 1) begin // 3
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 + width + length && horizontal_position < basex1 + doubleLength + width && vertical_position > basey1 + doubleLength + width && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[11] == 1) begin // 4
+                     else if (horizontal_position > basex1 + width + length && horizontal_position < basex1 + doubleLength + width && vertical_position > basey1 + doubleLength + doubleWidth && vertical_position < basey1 + doubleLength + tripleWidth && let_code_1[11] == 1) begin // 4
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 + doubleLength + width && horizontal_position < basex1 + doubleLength + doubleWidth && vertical_position > basey1 + length + width && vertical_position < basey1 + doubleLength + width && let_code_1[10] == 1) begin // 5
+                     else if (horizontal_position > basex1 + doubleLength + width && horizontal_position < basex1 + doubleLength + doubleWidth && vertical_position > basey1 + length + doubleWidth && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[10] == 1) begin // 5
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
@@ -161,7 +161,7 @@ reg clock;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 + length/2 && horizontal_position < basex1 + length/2 + width && vertical_position > basey1 + length + width && vertical_position < basey1 + doubleLength + width && let_code_1[5] == 1) begin // 10
+                     else if (horizontal_position > basex1 + length/2 && horizontal_position < basex1 + length/2 + width && vertical_position > basey1 + length + doubleWidth && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[5] == 1) begin // 10
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
@@ -171,7 +171,7 @@ reg clock;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 + width/2 + length && horizontal_position < basex1 + length + width/2 + width && vertical_position > basey1 + length + width && vertical_position < basey1 + doubleLength + width && let_code_1[3] == 1) begin // 12
+                     else if (horizontal_position > basex1 + width/2 + length && horizontal_position < basex1 + length + width/2 + width && vertical_position > basey1 + length + doubleWidth && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[3] == 1) begin // 12
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
@@ -186,7 +186,7 @@ reg clock;
                         VGA_B <= 0;
                         VGA_G <= 0;
                      end
-                     else if (horizontal_position > basex1 + length/2 + length && horizontal_position < basex1 + length/2 + length + width && vertical_position > basey1 + length + width && vertical_position < basey1 + doubleLength + width && let_code_1[0] == 1) begin // 15
+                     else if (horizontal_position > basex1 + length/2 + length && horizontal_position < basex1 + length/2 + length + width &&  vertical_position > basey1 + length + doubleWidth && vertical_position < basey1 + doubleLength + doubleWidth && let_code_1[0] == 1) begin // 15
                         VGA_R <= 8;
                         VGA_B <= 0;
                         VGA_G <= 0;
@@ -195,7 +195,6 @@ reg clock;
                         VGA_R <= 0;
                         VGA_B <= 0;
                         VGA_G <= 0;
-
                 end
                 else
                 begin
