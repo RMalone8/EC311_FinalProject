@@ -1,0 +1,32 @@
+module top(input [4:0] char,
+           input CLK100MHZ,
+           input reset,
+           output [3:0] VGA_R,
+           output [3:0] VGA_B,
+           output [3:0] VGA_G,
+           output hsync,
+           output vsync
+);
+
+wire [15:0] segment;
+
+wire [3:0] red;
+wire [3:0] blue;
+wire [3:0] green;
+
+wire hs;
+wire vs;
+
+segment_decoder seg_dec(.char(char), .segments(segment));
+
+vga vga_cont(.in_clk(CLK100MHZ), .let_code_1(segment), .VGA_R(red), .VGA_B(blue), .VGA_G(green), .VGA_HS(hs), .VGA_VS(vs));
+
+assign hsync = hs;
+assign vsync = vs;
+
+assign VGA_R = red;
+assign VGA_B = blue;
+assign VGA_G = green;
+
+
+endmodule
