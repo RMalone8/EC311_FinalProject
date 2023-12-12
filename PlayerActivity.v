@@ -21,37 +21,33 @@
 
 
 module PlayerActivity(
-    currentWord,
-    keystroke,
-    keyReleased,
+    input [19:0] currentWord,
+    input [19:0] nextWord,
+    input [4:0] keystroke,
+    input keyReleased,
     
-    wordComplete,
-    gameOver
+    output reg wordComplete,
+    output reg gameOver,
+    output reg [1:0] currentState,
+    output reg [10:0] totalWords
     );
-    
-    input [19:0] currentWord;
-    input [4:0] keystroke;
-    input keyReleased;
-    
-    output reg wordComplete;
-    output reg gameOver;
-    
+      
     wire [4:0] L1 = currentWord[19:15];
     wire [4:0] L2 = currentWord[14:10];
     wire [4:0] L3 = currentWord[9:5];
     wire [4:0] L4 = currentWord[4:0];
     
-    reg [1:0] currentState;
-    
     initial begin
-        currentState = 1;
+        currentState = 0;
+        gameOver = 0;
+        totalWords = 0;
     end
 
     always @ (posedge keyReleased) begin
         case(currentState)
-            1: begin
+            0: begin
                 if(keystroke == L1) begin
-                    currentState = 2;
+                    currentState = 1;
                     wordComplete = 0;
                 end else begin
                     gameOver = 1;
@@ -59,8 +55,17 @@ module PlayerActivity(
                     
             end
             
-            2: begin
+            1: begin
                 if(keystroke == L2) begin
+                    currentState = 2;
+                    wordComplete = 0;
+                end else begin
+                    gameOver = 1;
+                end
+            end
+            
+            2: begin
+                if(keystroke == L3) begin
                     currentState = 3;
                     wordComplete = 0;
                 end else begin
@@ -69,18 +74,10 @@ module PlayerActivity(
             end
             
             3: begin
-                if(keystroke == L3) begin
-                    currentState = 4;
-                    wordComplete = 0;
-                end else begin
-                    gameOver = 1;
-                end
-            end
-            
-            4: begin
                 if(keystroke == L4) begin
-                    currentState = 1;
+                    currentState = 0;
                     wordComplete = 1;
+                    totalWords = totalWords + 1;
                 end else begin
                     gameOver = 1;
                 end
@@ -88,6 +85,15 @@ module PlayerActivity(
             
         endcase
     end
+    
+    
+    WordDelivery wd (
+        .clk(clk),
+        .reset(reset),
+        .wordComplete(wordComplete),
+        .currentWord(currentWord),
+        .nextWord(nextWord)
+    );
         
     
 endmodule
