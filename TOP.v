@@ -65,13 +65,21 @@ module TOP(
         .tenths(tenths)
     );
     
-    //logic to calculate WPM
+    // (WPM signal formatting -> 2 LSB's are the decimals places)
     reg [9:0] total_sec;
-    always @ (clk) begin
-        total_sec = minutes * 60;
-        total_sec = total_sec + (sec_high*10) + sec_low;
-        WPM = totalWords / total_sec;
-        WPM = WPM / 60;
+    always @(posedge clk) begin
+        if (reset) begin
+            total_sec <= 0;
+            WPM <= 0;
+        end else begin
+            total_sec = minutes * 60 + sec_high * 10 + sec_low;
+            if (total_sec != 0) begin
+                // Scale totalWords by 100
+                WPM = (totalWords * 60 * 100) / total_sec;
+            end else begin
+                WPM = 0;
+            end
+        end
     end
         
 
