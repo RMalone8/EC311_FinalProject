@@ -329,8 +329,3 @@ reg clock;
         end
     end
 endmodule
-<<<<<<< HEAD
-=======
-
-
->>>>>>> fd439848ace82ab848abfc9aaeafc0fd99636e28
