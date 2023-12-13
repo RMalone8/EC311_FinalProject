@@ -42,6 +42,8 @@ module TOP(
     
     reg [10:0] totalWords;
     reg [10:0] WPM;
+    reg [24:0] WPM_integer; // 25 bits for the integer part
+    reg [6:0] WPM_decimal; // 7 bits for the decimal part
 
     // Instantiate PlayerActivity
     PlayerActivity pa (
@@ -71,13 +73,18 @@ module TOP(
         if (reset) begin
             total_sec <= 0;
             WPM <= 0;
+            WPM_integer <= 0;
+            WPM_decimal <= 0;
         end else begin
             total_sec = minutes * 60 + sec_high * 10 + sec_low;
             if (total_sec != 0) begin
-                // Scale totalWords by 100
                 WPM = (totalWords * 60 * 100) / total_sec;
+
+                WPM_integer = WPM / 100; // Integer part
+                WPM_decimal = WPM % 100; // Decimal part (fractional part scaled by 100)
             end else begin
-                WPM = 0;
+                WPM_integer = 0;
+                WPM_decimal = 0;
             end
         end
     end
