@@ -24,13 +24,13 @@ module top(
 input CLK100MHZ,
 input PS2_CLK,
 input PS2_DATA,
-input [3:0]opcode,
-output char,
-output kr    
+output[4:0]char,
+output kr
+//output [15:0]krcode    
     );
 
 reg CLK50MHZ=0; 
-wire[3:0] a;
+
 
 wire [31:0]keycode;
 
@@ -55,13 +55,14 @@ recievekey(
  .num1(test_num1[3:0]),
  .num2(test_num2[3:0]),
  .num3(test_num3[3:0]),
- .num4(test_num4[3:0])
+ .num4(test_num4[3:0]),
+ .kr(kr)
  );
  
  keycode_decoder(
  .dig1(test_num1[3:0]),
  .dig2(test_num2[3:0]),
- .a_or_b_out(a[3:0])
+ .a_or_b_out(char[4:0])
  );
  
  endmodule
