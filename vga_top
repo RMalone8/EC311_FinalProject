@@ -1,0 +1,112 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 12/12/2023 06:18:16 PM
+// Design Name: 
+// Module Name: top
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module top(
+input [4:0] char,
+input CLK100MHZ,
+input [2:0] word_pos,
+output hsync,
+output vsync,
+output [3:0] VGA_R,
+output [3:0] VGA_G,
+output [3:0] VGA_B
+    );
+
+reg [4:0] let_2 = 5'b00000;
+reg [4:0] let_3 = 5'b00001; 
+reg [4:0] let_4 = 5'b00010; 
+reg [4:0] let_5 = 5'b00011;
+reg [4:0] let_6 = 5'b00100; 
+reg [4:0] let_7 = 5'b00101; 
+reg [4:0] let_8 = 5'b00110; 
+ 
+wire [15:0] seg_data_1;
+wire [15:0] seg_data_2;
+wire [15:0] seg_data_3;
+wire [15:0] seg_data_4;
+wire [15:0] seg_data_5;
+wire [15:0] seg_data_6;
+wire [15:0] seg_data_7;
+wire [15:0] seg_data_8;
+wire [9:0] xpos_wire;
+wire [9:0] ypos_wire;
+
+
+segmentDecoder segcontrol_1(
+.char(char),
+.segments(seg_data_1)
+);
+
+segmentDecoder segcontrol_2(
+.char(let_2),
+.segments(seg_data_2)
+);
+
+segmentDecoder segcontrol_3(
+.char(let_3),
+.segments(seg_data_3)
+);
+
+segmentDecoder segcontrol_4(
+.char(let_4),
+.segments(seg_data_4)
+);
+
+segmentDecoder segcontrol_5(
+.char(let_5),
+.segments(seg_data_5)
+);
+
+segmentDecoder segcontrol_6(
+.char(let_6),
+.segments(seg_data_6)
+);
+
+segmentDecoder segcontrol_7(
+.char(let_7),
+.segments(seg_data_7)
+);
+
+segmentDecoder segcontrol_8(
+.char(let_8),
+.segments(seg_data_8)
+);
+
+vga vga_cont(
+.in_clk(CLK100MHZ),
+.let_code_1(seg_data_1),
+.let_code_2(seg_data_2),
+.let_code_3(seg_data_3),
+.let_code_4(seg_data_4),
+.let_code_5(seg_data_5),
+.let_code_6(seg_data_6),
+.let_code_7(seg_data_7),
+.let_code_8(seg_data_8),
+.word_pos(word_pos),
+.VGA_R(VGA_R),
+.VGA_G(VGA_G),
+.VGA_B(VGA_B),
+.VGA_HS(hsync),
+.VGA_VS(vsync)
+);
+
+endmodule
