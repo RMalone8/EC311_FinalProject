@@ -1,0 +1,62 @@
+`timescale 1ns / 1ps
+
+module CJ_Ryan_checker_tb;
+
+    // Inputs
+    reg clk;
+    reg kr;
+    reg reset;
+    reg [4:0] kstrk;
+    reg [19:0] cword;
+
+    // Outputs
+    wire pass;
+    wire fail;
+    wire [2:0] cstate;
+    wire [8:0] score;
+
+    // Instantiate the Unit Under Test (UUT)
+    CJ_Ryan_checker uut (
+        .clk(clk),
+        .kr(kr),
+        .reset(reset),
+        .kstrk(kstrk),
+        .cword(cword),
+        .pass(pass),
+        .fail(fail),
+        .cstate(cstate),
+        .score(score)
+    );
+
+    // Clock generation
+    initial begin
+        clk = 0;
+        forever #5 clk = ~clk; // 100MHz clock
+    end
+
+    // Test sequence
+    initial begin
+        // Initialize Inputs
+        kr = 0;
+        reset = 0;
+        kstrk = 5'b10101;
+        cword = 20'b10101_10101_10101_10101; // Example word
+
+        // Wait for the global reset
+        #100;
+        
+        // Add test cases here
+        // Example test case: simulate key release and correct key stroke
+        kr = 1; // Simulate key release
+        kstrk = 5'b10101; // Simulate correct key stroke
+        #10; // Wait some time
+        kr = 0; // Reset key release
+
+        // More test cases can be added here to simulate different scenarios
+
+        // Finish the simulation
+        #1000;
+        $finish;
+    end
+
+endmodule
