@@ -77,4 +77,5 @@ always @(posedge flag)begin
         keycode[7:0]<=datacur;
         dataprev<=datacur;
     end
+    assign keycodeout=keycode;
 endmodule
