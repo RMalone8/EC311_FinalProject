@@ -1,0 +1,982 @@
+module vga(
+ input in_clk,
+ input [15:0] let_code_1,
+ input [15:0] let_code_2,
+ input [15:0] let_code_3,
+ input [15:0] let_code_4,
+ input [15:0] let_code_5,
+ input [15:0] let_code_6,
+ input [15:0] let_code_7,
+ input [15:0] let_code_8,
+ input [2:0] word_pos,
+    output reg [3:0] VGA_R,
+    output reg [3:0] VGA_G,
+    output reg [3:0] VGA_B,
+    output reg VGA_HS,
+    output reg VGA_VS
+    );
+    
+parameter width = 10, length = 20, doubleWidth = 20, tripleWidth = 30, doubleLength = 40, innerOffset = 2;
+parameter widthSmall = 8, lengthSmall = 16, doubleWidthSmall = 16, tripleWidthSmall = 24, doubleLengthSmall = 32, innerOffsetSmall = 1;
+parameter basex1 = 30, basex2 = 150, basex3 = 270, basex4 = 390;
+parameter topy = 100, bottomy = 200;
+
+reg [3:0] let_red_1;
+reg [3:0] let_green_1;
+reg [3:0] let_blue_1;
+reg [3:0] let_red_2;
+reg [3:0] let_green_2;
+reg [3:0] let_blue_2;
+reg [3:0] let_red_3;
+reg [3:0] let_green_3;
+reg [3:0] let_blue_3;
+reg [3:0] let_red_4;
+reg [3:0] let_green_4;
+reg [3:0] let_blue_4;
+
+reg [3:0] let_red_bottom;
+reg [3:0] let_green_bottom;
+reg [3:0] let_blue_bottom;
+
+reg[32:0] clk_count;
+reg clock;
+
+	initial begin
+		clk_count = 0;
+		clock = 0;
+	end
+	
+	always @(negedge in_clk)
+	begin
+		clk_count = clk_count + 1;
+		if (clk_count == 2) begin
+			clock <= ~clock;
+			clk_count <= 0;
+			end
+	end
+
+
+    reg [31:0] count, vertical_count;
+    reg [31:0] vertical_position, horizontal_position;
+    reg [1:0] vertical_state, horizontal_state;
+    reg vertical_trigger, vertical_blank; // triggers the vertical state machine
+    // states: 0 means pre-blanking; 1 means pixels; 2 means post-blanking; 3 means synchronizing
+    // pre-blanking: 48 cycles, HS high
+    // pixels: 640 cycles, HS high
+    // post-blanking: 16 cycles, HS high
+    // synchronization: 96 cycles, HS low
+    
+    initial begin
+        vertical_position = 0;
+        count = 1;
+        vertical_count = 1;
+        horizontal_position = 0;
+        vertical_state = 3;
+        horizontal_state = 3;
+        VGA_HS = 1;
+        VGA_VS = 1;
+        VGA_R = 0;
+        VGA_G = 0;
+        VGA_B = 0;
+        vertical_trigger = 0;
+        vertical_blank = 1; // one means blank line instead of display data
+    end
+    
+    /////////// BEGIN HORIZONTAL STATE MACHINE //////////////
+    always @(posedge clock)
+    begin
+        if (horizontal_state == 0) 
+        begin
+            // blank for 48 cycles
+            if (count == 47) begin
+                count <= 1;
+                horizontal_state <= 1;
+                // vertical_position <= vertical_position + 1;
+                vertical_trigger <= 1; // to trigger the veritcal FSM on rising edge
+            end
+            else
+            begin
+                vertical_trigger <= 0;
+                count <= count + 1;
+            end
+        end
+        else if (horizontal_state == 1)
+        begin
+            // shift out 640 pixels
+            if (horizontal_position == 640)
+            begin
+                // reached end of line
+                VGA_R <= 0;
+                VGA_G <= 0;
+                VGA_B <= 0;
+                horizontal_position <= 0;
+                horizontal_state <= 2;
+            end
+            else
+            begin
+                if (vertical_blank == 0)
+                begin
+                    case(word_pos)
+                        3'b000: begin
+                            let_red_1 <= 8;
+                            let_blue_1 <= 8;
+                            let_green_1 <= 8;
+                            let_red_2 <= 8;
+                            let_blue_2 <= 8;
+                            let_green_2 <= 8;
+                            let_red_3 <= 8;
+                            let_blue_3 <= 8;
+                            let_green_3 <= 8;
+                            let_red_4 <= 8;
+                            let_blue_4 <= 8;
+                            let_green_4 <= 8;
+                            let_red_bottom <= 8;
+                            let_blue_bottom <= 8;
+                            let_green_bottom <= 8;
+                        end
+                        3'b001: begin
+                            let_red_1 <= 0;
+                            let_blue_1 <= 0;
+                            let_green_1 <= 8;
+                            let_red_2 <= 8;
+                            let_blue_2 <= 8;
+                            let_green_2 <= 8;
+                            let_red_3 <= 8;
+                            let_blue_3 <= 8;
+                            let_green_3 <= 8;
+                            let_red_4 <= 8;
+                            let_blue_4 <= 8;
+                            let_green_4 <= 8;
+                            let_red_bottom <= 8;
+                            let_blue_bottom <= 8;
+                            let_green_bottom <= 8;
+                        end
+                        3'b010: begin
+                            let_red_1 <= 0;
+                            let_blue_1 <= 0;
+                            let_green_1 <= 8;
+                            let_red_2 <= 0;
+                            let_blue_2 <= 0;
+                            let_green_2 <= 8;
+                            let_red_3 <= 8;
+                            let_blue_3 <= 8;
+                            let_green_3 <= 8;
+                            let_red_4 <= 8;
+                            let_blue_4 <= 8;
+                            let_green_4 <= 8;
+                            let_red_bottom <= 8;
+                            let_blue_bottom <= 8;
+                            let_green_bottom <= 8;
+                        end
+                        3'b011: begin
+                            let_red_1 <= 0;
+                            let_blue_1 <= 0;
+                            let_green_1 <= 8;
+                            let_red_2 <= 0;
+                            let_blue_2 <= 0;
+                            let_green_2 <= 8;
+                            let_red_3 <= 0;
+                            let_blue_3 <= 0;
+                            let_green_3 <= 8;
+                            let_red_4 <= 8;
+                            let_blue_4 <= 8;
+                            let_green_4 <= 8;
+                            let_red_bottom <= 8;
+                            let_blue_bottom <= 8;
+                            let_green_bottom <= 8;
+                        end
+                        3'b100: begin
+                            let_red_1 <= 0;
+                            let_blue_1 <= 0;
+                            let_green_1 <= 8;
+                            let_red_2 <= 0;
+                            let_blue_2 <= 0;
+                            let_green_2 <= 8;
+                            let_red_3 <= 0;
+                            let_blue_3 <= 0;
+                            let_green_3 <= 8;
+                            let_red_4 <= 0;
+                            let_blue_4 <= 0;
+                            let_green_4 <= 8;
+                            let_red_bottom <= 8;
+                            let_blue_bottom <= 8;
+                            let_green_bottom <= 8;
+                        end
+                        3'b101: begin // fail state
+                            let_red_1 <= 8;
+                            let_blue_1 <= 0;
+                            let_green_1 <= 0;
+                            let_red_2 <= 8;
+                            let_blue_2 <= 0;
+                            let_green_2 <= 0;
+                            let_red_3 <= 8;
+                            let_blue_3 <= 0;
+                            let_green_3 <= 0;
+                            let_red_4 <= 8;
+                            let_blue_4 <= 0;
+                            let_green_4 <= 0;
+                            let_red_bottom <= 8;
+                            let_blue_bottom <= 0;
+                            let_green_bottom <= 0;
+                        end
+                    endcase
+                    
+                    // First letter
+                    if (horizontal_position > basex1 + width && horizontal_position < basex1 + length + width && vertical_position > topy && vertical_position < topy + width && let_code_1[15] == 1) begin // 0
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                    end
+                    else if (horizontal_position > basex1 && horizontal_position < basex1 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_1[14] == 1) begin // 1
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 && horizontal_position < basex1 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_1[13] == 1) begin // 2
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width && horizontal_position < basex1 + length + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_1[12] == 1) begin // 3
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + length && horizontal_position < basex1 + doubleLength + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_1[11] == 1) begin // 4
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + doubleLength + width && horizontal_position < basex1 + doubleLength + doubleWidth && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_1[10] == 1) begin // 5
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + doubleLength + width && horizontal_position < basex1 + doubleLength + doubleWidth &&  vertical_position > topy + width && vertical_position < topy + length + width && let_code_1[9] == 1) begin // 6
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + length && horizontal_position < basex1 + doubleLength + width && vertical_position > topy && vertical_position < topy + width && let_code_1[8] == 1) begin // 7
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + innerOffset + 1 && horizontal_position < basex1 + doubleWidth + innerOffset + 1 && vertical_position > topy + width && vertical_position < topy + length + width && let_code_1[7] == 1) begin // 8
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width && horizontal_position < basex1 + length + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_1[6] == 1) begin // 9
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + innerOffset + 1 && horizontal_position < basex1 + doubleWidth + innerOffset + 1 && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_1[5] == 1) begin // 10
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width/2 + length && horizontal_position < basex1 + length + width/2 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_1[4] == 1) begin // 11
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width/2 + length && horizontal_position < basex1 + length + width/2 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_1[3] == 1) begin // 12
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + length + innerOffset && horizontal_position < basex1 + doubleWidth + length + innerOffset && vertical_position > topy + width && vertical_position < topy + length + width && let_code_1[2] == 1) begin // 13
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + length && horizontal_position < basex1 + doubleLength + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_1[1] == 1) begin // 14
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     else if (horizontal_position > basex1 + width + length + innerOffset && horizontal_position < basex1 + doubleWidth + length + innerOffset && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_1[0] == 1) begin // 15
+                        VGA_R <= let_red_1;
+                        VGA_B <= let_blue_1;
+                        VGA_G <= let_green_1;
+                     end
+                     
+                     // Second Letter
+                     else if (horizontal_position > basex2 + width && horizontal_position < basex2 + length + width && vertical_position > topy && vertical_position < topy + width && let_code_2[15] == 1) begin // 0
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                    end
+                    else if (horizontal_position > basex2 && horizontal_position < basex2 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_2[14] == 1) begin // 1
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 && horizontal_position < basex2 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_2[13] == 1) begin // 2
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width && horizontal_position < basex2 + length + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_2[12] == 1) begin // 3
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + length && horizontal_position < basex2 + doubleLength + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_2[11] == 1) begin // 4
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + doubleLength + width && horizontal_position < basex2 + doubleLength + doubleWidth && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_2[10] == 1) begin // 5
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + doubleLength + width && horizontal_position < basex2 + doubleLength + doubleWidth &&  vertical_position > topy + width && vertical_position < topy + length + width && let_code_2[9] == 1) begin // 6
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + length && horizontal_position < basex2 + doubleLength + width && vertical_position > topy && vertical_position < topy + width && let_code_2[8] == 1) begin // 7
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + innerOffset + 1 && horizontal_position < basex2 + doubleWidth + innerOffset + 1 && vertical_position > topy + width && vertical_position < topy + length + width && let_code_2[7] == 1) begin // 8
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width && horizontal_position < basex2 + length + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_2[6] == 1) begin // 9
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + innerOffset + 1 && horizontal_position < basex2 + doubleWidth + innerOffset + 1 && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_2[5] == 1) begin // 10
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width/2 + length && horizontal_position < basex2 + length + width/2 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_2[4] == 1) begin // 11
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width/2 + length && horizontal_position < basex2 + length + width/2 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_2[3] == 1) begin // 12
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + length + innerOffset && horizontal_position < basex2 + doubleWidth + length + innerOffset && vertical_position > topy + width && vertical_position < topy + length + width && let_code_2[2] == 1) begin // 13
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + length && horizontal_position < basex2 + doubleLength + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_2[1] == 1) begin // 14
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     else if (horizontal_position > basex2 + width + length + innerOffset && horizontal_position < basex2 + doubleWidth + length + innerOffset && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_2[0] == 1) begin // 15
+                        VGA_R <= let_red_2;
+                        VGA_B <= let_blue_2;
+                        VGA_G <= let_green_2;
+                     end
+                     
+                     // Third Letter
+                     else if (horizontal_position > basex3 + width && horizontal_position < basex3 + length + width && vertical_position > topy && vertical_position < topy + width && let_code_3[15] == 1) begin // 0
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                    end
+                    else if (horizontal_position > basex3 && horizontal_position < basex3 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_3[14] == 1) begin // 1
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 && horizontal_position < basex3 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_3[13] == 1) begin // 2
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width && horizontal_position < basex3 + length + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_3[12] == 1) begin // 3
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + length && horizontal_position < basex3 + doubleLength + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_3[11] == 1) begin // 4
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + doubleLength + width && horizontal_position < basex3 + doubleLength + doubleWidth && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_3[10] == 1) begin // 5
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + doubleLength + width && horizontal_position < basex3 + doubleLength + doubleWidth &&  vertical_position > topy + width && vertical_position < topy + length + width && let_code_3[9] == 1) begin // 6
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + length && horizontal_position < basex3 + doubleLength + width && vertical_position > topy && vertical_position < topy + width && let_code_3[8] == 1) begin // 7
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + innerOffset + 1 && horizontal_position < basex3 + doubleWidth + innerOffset + 1 && vertical_position > topy + width && vertical_position < topy + length + width && let_code_3[7] == 1) begin // 8
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width && horizontal_position < basex3 + length + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_3[6] == 1) begin // 9
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + innerOffset + 1 && horizontal_position < basex3 + doubleWidth + innerOffset + 1 && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_3[5] == 1) begin // 10
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width/2 + length && horizontal_position < basex3 + length + width/2 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_3[4] == 1) begin // 11
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width/2 + length && horizontal_position < basex3 + length + width/2 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_3[3] == 1) begin // 12
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + length + innerOffset && horizontal_position < basex3 + doubleWidth + length + innerOffset && vertical_position > topy + width && vertical_position < topy + length + width && let_code_3[2] == 1) begin // 13
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + length && horizontal_position < basex3 + doubleLength + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_3[1] == 1) begin // 14
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+                     else if (horizontal_position > basex3 + width + length + innerOffset && horizontal_position < basex3 + doubleWidth + length + innerOffset && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_3[0] == 1) begin // 15
+                        VGA_R <= let_red_3;
+                        VGA_B <= let_blue_3;
+                        VGA_G <= let_green_3;
+                     end
+
+                    // Fourth Letter
+                     else if (horizontal_position > basex4 + width && horizontal_position < basex4 + length + width && vertical_position > topy && vertical_position < topy + width && let_code_4[15] == 1) begin // 0
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                    end
+                    else if (horizontal_position > basex4 && horizontal_position < basex4 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_4[14] == 1) begin // 1
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 && horizontal_position < basex4 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_4[13] == 1) begin // 2
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width && horizontal_position < basex4 + length + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_4[12] == 1) begin // 3
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + length && horizontal_position < basex4 + doubleLength + width && vertical_position > topy + doubleLength + doubleWidth && vertical_position < topy + doubleLength + tripleWidth && let_code_4[11] == 1) begin // 4
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + doubleLength + width && horizontal_position < basex4 + doubleLength + doubleWidth && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_4[10] == 1) begin // 5
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + doubleLength + width && horizontal_position < basex4 + doubleLength + doubleWidth &&  vertical_position > topy + width && vertical_position < topy + length + width && let_code_4[9] == 1) begin // 6
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + length && horizontal_position < basex4 + doubleLength + width && vertical_position > topy && vertical_position < topy + width && let_code_4[8] == 1) begin // 7
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + innerOffset + 1 && horizontal_position < basex4 + doubleWidth + innerOffset + 1 && vertical_position > topy + width && vertical_position < topy + length + width && let_code_4[7] == 1) begin // 8
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width && horizontal_position < basex4 + length + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_4[6] == 1) begin // 9
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + innerOffset + 1 && horizontal_position < basex4 + doubleWidth + innerOffset + 1 && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_4[5] == 1) begin // 10
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width/2 + length && horizontal_position < basex4 + length + width/2 + width && vertical_position > topy + width && vertical_position < topy + length + width && let_code_4[4] == 1) begin // 11
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width/2 + length && horizontal_position < basex4 + length + width/2 + width && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_4[3] == 1) begin // 12
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + length + innerOffset && horizontal_position < basex4 + doubleWidth + length + innerOffset && vertical_position > topy + width && vertical_position < topy + length + width && let_code_4[2] == 1) begin // 13
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + length && horizontal_position < basex4 + doubleLength + width && vertical_position > topy + length + width && vertical_position < topy + length + doubleWidth && let_code_4[1] == 1) begin // 14
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+                     else if (horizontal_position > basex4 + width + length + innerOffset && horizontal_position < basex4 + doubleWidth + length + innerOffset && vertical_position > topy + length + doubleWidth && vertical_position < topy + doubleLength + doubleWidth && let_code_4[0] == 1) begin // 15
+                        VGA_R <= let_red_4;
+                        VGA_B <= let_blue_4;
+                        VGA_G <= let_green_4;
+                     end
+
+
+                    // Bottom letters: 
+                    
+                    // First letter
+                    else if (horizontal_position > basex1 + widthSmall && horizontal_position < basex1 + lengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_5[15] == 1) begin // 0
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                    end
+                    else if (horizontal_position > basex1 && horizontal_position < basex1 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_5[14] == 1) begin // 1
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 && horizontal_position < basex1 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_5[13] == 1) begin // 2
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall && horizontal_position < basex1 + lengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_5[12] == 1) begin // 3
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + lengthSmall && horizontal_position < basex1 + doubleLengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_5[11] == 1) begin // 4
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + doubleLengthSmall + widthSmall && horizontal_position < basex1 + doubleLengthSmall + doubleWidthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_5[10] == 1) begin // 5
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + doubleLengthSmall + widthSmall && horizontal_position < basex1 + doubleLengthSmall + doubleWidthSmall &&  vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_5[9] == 1) begin // 6
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + lengthSmall && horizontal_position < basex1 + doubleLengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_5[8] == 1) begin // 7
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex1 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_5[7] == 1) begin // 8
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall && horizontal_position < basex1 + lengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_5[6] == 1) begin // 9
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex1 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_5[5] == 1) begin // 10
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall/2 + lengthSmall && horizontal_position < basex1 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_5[4] == 1) begin // 11
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall/2 + lengthSmall && horizontal_position < basex1 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_5[3] == 1) begin // 12
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex1 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_5[2] == 1) begin // 13
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + lengthSmall && horizontal_position < basex1 + doubleLengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_5[1] == 1) begin // 14
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex1 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex1 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_5[0] == 1) begin // 15
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     
+                     // Second Letter
+                     else if (horizontal_position > basex2 + widthSmall && horizontal_position < basex2 + lengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_6[15] == 1) begin // 0
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                    end
+                    else if (horizontal_position > basex2 && horizontal_position < basex2 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_6[14] == 1) begin // 1
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 && horizontal_position < basex2 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_6[13] == 1) begin // 2
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall && horizontal_position < basex2 + lengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_6[12] == 1) begin // 3
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + lengthSmall && horizontal_position < basex2 + doubleLengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_6[11] == 1) begin // 4
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + doubleLengthSmall + widthSmall && horizontal_position < basex2 + doubleLengthSmall + doubleWidthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_6[10] == 1) begin // 5
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + doubleLengthSmall + widthSmall && horizontal_position < basex2 + doubleLengthSmall + doubleWidthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_6[9] == 1) begin // 6
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + lengthSmall && horizontal_position < basex2 + doubleLengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_6[8] == 1) begin // 7
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex2 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_6[7] == 1) begin // 8
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall && horizontal_position < basex2 + lengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_6[6] == 1) begin // 9
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex2 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_6[5] == 1) begin // 10
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall/2 + lengthSmall && horizontal_position < basex2 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_6[4] == 1) begin // 11
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall/2 + lengthSmall && horizontal_position < basex2 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_6[3] == 1) begin // 12
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex2 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_6[2] == 1) begin // 13
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + lengthSmall && horizontal_position < basex2 + doubleLengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_6[1] == 1) begin // 14
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex2 + widthSmall + lengthSmall + innerOffset && horizontal_position < basex2 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_6[0] == 1) begin // 15
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     
+                     // Third Letter
+                     else if (horizontal_position > basex3 + widthSmall && horizontal_position < basex3 + lengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_7[15] == 1) begin // 0
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                    end
+                    else if (horizontal_position > basex3 && horizontal_position < basex3 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_7[14] == 1) begin // 1
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 && horizontal_position < basex3 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_7[13] == 1) begin // 2
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall && horizontal_position < basex3 + lengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_7[12] == 1) begin // 3
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + lengthSmall && horizontal_position < basex3 + doubleLengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_7[11] == 1) begin // 4
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + doubleLengthSmall + widthSmall && horizontal_position < basex3 + doubleLengthSmall + doubleWidthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_7[10] == 1) begin // 5
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + doubleLengthSmall + widthSmall && horizontal_position < basex3 + doubleLengthSmall + doubleWidthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_7[9] == 1) begin // 6
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + lengthSmall && horizontal_position < basex3 + doubleLengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_7[8] == 1) begin // 7
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex3 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_7[7] == 1) begin // 8
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall && horizontal_position < basex3 + lengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_7[6] == 1) begin // 9
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex3 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_7[5] == 1) begin // 10
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall/2 + lengthSmall && horizontal_position < basex3 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_7[4] == 1) begin // 11
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall/2 + lengthSmall && horizontal_position < basex3 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_7[3] == 1) begin // 12
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex3 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_7[2] == 1) begin // 13
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + lengthSmall && horizontal_position < basex3 + doubleLengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_7[1] == 1) begin // 14
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex3 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex3 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_7[0] == 1) begin // 15
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+
+                    // Fourth Letter
+                     else if (horizontal_position > basex4 + widthSmall && horizontal_position < basex4 + lengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_8[15] == 1) begin // 0
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                    end
+                    else if (horizontal_position > basex4 && horizontal_position < basex4 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_8[14] == 1) begin // 1
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 && horizontal_position < basex4 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_8[13] == 1) begin // 2
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall && horizontal_position < basex4 + lengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_8[12] == 1) begin // 3
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + lengthSmall && horizontal_position < basex4 + doubleLengthSmall + widthSmall && vertical_position > bottomy + doubleLengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + tripleWidthSmall && let_code_8[11] == 1) begin // 4
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + doubleLengthSmall + widthSmall && horizontal_position < basex4 + doubleLengthSmall + doubleWidthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_8[10] == 1) begin // 5
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + doubleLengthSmall + widthSmall && horizontal_position < basex4 + doubleLengthSmall + doubleWidthSmall &&  vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_8[9] == 1) begin // 6
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + lengthSmall && horizontal_position < basex4 + doubleLengthSmall + widthSmall && vertical_position > bottomy && vertical_position < bottomy + widthSmall && let_code_8[8] == 1) begin // 7
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex4 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_8[7] == 1) begin // 8
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall && horizontal_position < basex4 + lengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_8[6] == 1) begin // 9
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + innerOffsetSmall + 1 && horizontal_position < basex4 + doubleWidthSmall + innerOffsetSmall + 1 && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_8[5] == 1) begin // 10
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall/2 + lengthSmall && horizontal_position < basex4 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_8[4] == 1) begin // 11
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall/2 + lengthSmall && horizontal_position < basex4 + lengthSmall + widthSmall/2 + widthSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_8[3] == 1) begin // 12
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex4 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + widthSmall && vertical_position < bottomy + lengthSmall + widthSmall && let_code_8[2] == 1) begin // 13
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + lengthSmall && horizontal_position < basex4 + doubleLengthSmall + widthSmall && vertical_position > bottomy + lengthSmall + widthSmall && vertical_position < bottomy + lengthSmall + doubleWidthSmall && let_code_8[1] == 1) begin // 14
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+                     else if (horizontal_position > basex4 + widthSmall + lengthSmall + innerOffsetSmall && horizontal_position < basex4 + doubleWidthSmall + lengthSmall + innerOffsetSmall && vertical_position > bottomy + lengthSmall + doubleWidthSmall && vertical_position < bottomy + doubleLengthSmall + doubleWidthSmall && let_code_8[0] == 1) begin // 15
+                        VGA_R <= let_red_bottom;
+                        VGA_B <= let_blue_bottom;
+                        VGA_G <= let_green_bottom;
+                     end
+
+                     else begin
+                        VGA_R <= 0;
+                        VGA_B <= 0;
+                        VGA_G <= 0;
+                    end
+                end
+                else
+                begin
+                    VGA_B <= 0;
+                end
+                horizontal_position <= horizontal_position + 1;
+            end
+        end
+        else if (horizontal_state == 2)
+        begin
+            // blank for 16 cycles
+            if (count == 16) begin
+                count <= 1;
+                VGA_HS <= 0;
+                horizontal_state <= 3;
+            end
+            else
+            begin
+                count <= count + 1;
+            end
+        end
+        else // 3
+        begin
+            // sync for 96 cycles
+            if (count == 96) begin
+                VGA_HS <= 1;
+                count <= 1;
+                horizontal_state <= 0;
+            end
+            else
+            begin
+                count <= count + 1;
+            end
+        end
+    end
+    
+    /////////// BEGIN VERTICAL STATE MACHINE //////////////
+    always @(posedge vertical_trigger)
+    begin
+        if (vertical_state == 0) 
+        begin
+            // blank for 33 lines
+            if (vertical_count == 32) begin
+                vertical_count <= 1;
+                vertical_state <= 1;
+            end
+            else
+            begin
+                vertical_count <= vertical_count + 1;
+            end
+        end
+        else if (vertical_state == 1)
+        begin
+            // shift out 480 lines
+            if (vertical_position == 480)
+            begin
+                // reached end of frame
+                vertical_position <= 0;
+                vertical_state <= 2;
+                vertical_blank <= 1;
+            end
+            else
+            begin
+                vertical_blank <= 0; // start displaying data instead of blanking
+                vertical_position <= vertical_position + 1;
+            end
+        end
+        else if (vertical_state == 2)
+        begin
+            // blank for 10 lines
+            if (vertical_count == 10) begin
+                vertical_count <= 1;
+                VGA_VS <= 0;
+                vertical_state <= 3;
+            end
+            else
+            begin
+                vertical_count <= vertical_count + 1;
+            end
+        end
+        else // 3
+        begin
+            // sync for 2 lines
+            if (vertical_count == 2) begin
+                VGA_VS <= 1;
+                vertical_count <= 1;
+                vertical_state <= 0;
+            end
+            else
+            begin
+                vertical_count <= vertical_count + 1;
+            end
+        end
+    end
+endmodule
