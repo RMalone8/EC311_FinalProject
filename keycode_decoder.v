@@ -53,6 +53,7 @@ parameter w = 5'b11010;
 parameter x = 5'b11011;
 parameter y = 5'b11100;
 parameter z = 5'b11101;
+parameter ENTR = 5'b11111;
 always @(dig1,dig2) begin
     case(dig2) //leftmost character of keystroke
     1: begin case(dig1) //rightmost character of keystroke
@@ -91,11 +92,14 @@ always @(dig1,dig2) begin
         13:abreg<= p;
         2:abreg<=k;
         11: abreg<=l;
-        
-        endcase
+         endcase
         end 
+     5: begin case(dig1)
+        10: abreg <= ENTR;  
     endcase
     end 
+    endcase
+    end
     assign a_or_b_out = abreg;    
 endmodule
 
