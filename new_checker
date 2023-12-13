@@ -1,0 +1,128 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 12/13/2023 11:00:40 AM
+// Design Name: 
+// Module Name: CJ_Ryan_checker
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module CJ_Ryan_checker(
+input clk, 
+input kr,
+input reset, //key release
+input [4:0] kstrk, //data from one key stroke
+input [19:0] cword, //current word from big word reg
+output reg pass, 
+output reg fail,
+output [2:0] cstate,
+output reg [8:0] score 
+    );
+    
+parameter S0=0, S1=1, S2=2, S3=3, Sfail=4, Sstart1=5, Sstart2=6;
+parameter gameTimer = 500000000;   
+
+reg [2:0] currstate;
+reg [2:0] nextstate;
+
+reg [4:0] currletter;
+
+wire correct;
+
+reg [28:0] counter;
+
+initial currstate = Sstart1;
+initial nextstate=S0;
+initial currletter=cword[4:0];
+initial counter = 0;
+initial score = 0; 
+    
+assign cstate = currstate;
+    
+assign correct = (kstrk == currletter) ? 1'b1 : 1'b0;
+    
+always@(posedge kr)begin
+  counter=0;
+    case(currstate)
+        S0: if (correct) begin
+                nextstate <= S1;
+                pass = 0;
+                currletter <= cword[9:5];
+            end
+            else begin
+                nextstate <= Sfail;
+                pass = 1;
+            end
+         S1: if (correct) begin
+                nextstate <= S2;
+                pass = 0;
+                currletter <= cword[14:10];
+            end
+            else begin
+                nextstate <= Sfail;
+                pass = 1;
+            end
+         S2: if (correct) begin
+                nextstate <= S3;
+                pass = 0;
+                currletter <= cword[19:15];
+            end
+            else begin
+                nextstate <= Sfail;
+                pass = 1;
+            end
+          S3: if (correct) begin
+                nextstate <= S0;
+                pass = 1;
+                score = score +1;
+            end
+            else begin
+                nextstate <= Sfail;
+                pass = 1;     
+            end 
+         Sstart1: if (kstrk == 5'b11111) begin
+                nextstate <= Sstart2;
+                pass = 1;
+                fail=0;
+            end
+            else begin
+                nextstate <= Sstart1;
+                pass = 0;     
+            end
+       endcase
+   end
+        
+        
+always @ (posedge clk) begin
+    currstate <= nextstate;
+    if (currstate == Sfail)begin
+        counter = counter +1;
+        fail = 1;
+        pass = 1;
+        end
+    if (counter == gameTimer)begin
+        counter = 0;
+        currstate <= Sstart1;
+        pass =0 ;
+        end
+     if(currstate <= Sstart2)begin
+          nextstate <= S0;
+          pass = 0;
+     end
+    // Timer logic here
+end
+    
+endmodule
