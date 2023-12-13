@@ -1,0 +1,196 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 12/13/2023 03:37:38 PM
+// Design Name: 
+// Module Name: final_top
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module final_top(
+input [4:0] char,
+input CLK100MHZ,
+input [2:0] word_pos,
+input PS2_CLK,
+input PS2_DATA,
+output kr,
+output hsync,
+output vsync,
+output [3:0] VGA_R,
+output [3:0] VGA_G,
+output [3:0] VGA_B
+    );
+    
+reg CLK50MHZ=0; 
+wire[4:0] a;
+
+wire [31:0]keycode;
+
+wire [3:0]test_num1;
+wire [3:0]test_num2;
+wire [3:0]test_num3;
+wire [3:0]test_num4;
+
+wire kr;
+
+reg [4:0] let_2 = 5'b00000;
+reg [4:0] let_3 = 5'b00001; 
+reg [4:0] let_4 = 5'b00010; 
+reg [4:0] let_5 = 5'b00011;
+reg [4:0] let_6 = 5'b00100; 
+reg [4:0] let_7 = 5'b00101; 
+reg [4:0] let_8 = 5'b00110;
+
+reg [7:0] score = 123;
+
+//reg [6:0] score_100s;
+//reg [6:0] score_10s = 7'b0110111;
+//reg [6:0] score_1s = 7'b0001100;
+reg [6:0] lives = 7'b0011111;
+
+wire [20:0] score_seg;
+
+wire [15:0] seg_data_1;
+wire [15:0] seg_data_2;
+wire [15:0] seg_data_3;
+wire [15:0] seg_data_4;
+wire [15:0] seg_data_5;
+wire [15:0] seg_data_6;
+wire [15:0] seg_data_7;
+wire [15:0] seg_data_8;
+
+always @ (word_pos) begin
+    case(word_pos)
+        3'b101: begin
+            let_2 <= 5'b00000; // A
+            let_3 <= 5'b01100; // M
+            let_4 <= 5'b00100; // E
+            let_5 <= 5'b01110; // O
+            let_6 <= 5'b10101; // V
+            let_7 <= 5'b00100; // E
+            let_8 <= 5'b10001; // R
+        end
+        3'b110: begin
+            let_2 <= 5'b00111; // H
+            let_3 <= 5'b01000; // I
+            let_4 <= 5'b10011; // T
+            let_5 <= 5'b00100; // E
+            let_6 <= 5'b01101; // N
+            let_7 <= 5'b10011; // T
+            let_8 <= 5'b10001;  // R
+        end
+    endcase
+end
+
+always @(posedge(CLK100MHZ))begin
+    CLK50MHZ<=~CLK50MHZ;
+end
+
+PS2Receiver keyboard(
+.clk(CLK50MHZ),
+.kclk(PS2_CLK),
+.kdata(PS2_DATA),
+.keycodeout(keycode[31:0])
+);
+
+recievekey(
+ .keycode(keycode[31:0]),
+ .num1(test_num1[3:0]),
+ .num2(test_num2[3:0]),
+ .num3(test_num3[3:0]),
+ .num4(test_num4[3:0]),
+ .kr(kr)
+ );
+ 
+ keycode_decoder(
+ .dig1(test_num1[3:0]),
+ .dig2(test_num2[3:0]),
+ .a_or_b_out(a[4:0])
+    );
+
+// Score Decoders
+numericSegmentDecoder nsd(
+.num(score),
+.num_seg(score_seg)
+);
+
+
+
+// Segment Decoders
+segmentDecoder segcontrol_1(
+.char(a),
+.segments(seg_data_1)
+);
+
+segmentDecoder segcontrol_2(
+.char(let_2),
+.segments(seg_data_2)
+);
+
+segmentDecoder segcontrol_3(
+.char(let_3),
+.segments(seg_data_3)
+);
+
+segmentDecoder segcontrol_4(
+.char(let_4),
+.segments(seg_data_4)
+);
+
+segmentDecoder segcontrol_5(
+.char(let_5),
+.segments(seg_data_5)
+);
+
+segmentDecoder segcontrol_6(
+.char(let_6),
+.segments(seg_data_6)
+);
+
+segmentDecoder segcontrol_7(
+.char(let_7),
+.segments(seg_data_7)
+);
+
+segmentDecoder segcontrol_8(
+.char(let_8),
+.segments(seg_data_8)
+);
+    
+vga vga_cont(
+.in_clk(CLK100MHZ),
+.let_code_1(seg_data_1),
+.let_code_2(seg_data_2),
+.let_code_3(seg_data_3),
+.let_code_4(seg_data_4),
+.let_code_5(seg_data_5),
+.let_code_6(seg_data_6),
+.let_code_7(seg_data_7),
+.let_code_8(seg_data_8),
+.score_100s(score_seg[20:14]),
+.score_10s(score_seg[13:7]),
+.score_1s(score_seg[6:0]),
+.lives(lives),
+.word_pos(word_pos),
+.VGA_R(VGA_R),
+.VGA_G(VGA_G),
+.VGA_B(VGA_B),
+.VGA_HS(hsync),
+.VGA_VS(vsync)
+);
+   
+ 
+endmodule
