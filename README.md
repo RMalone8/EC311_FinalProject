@@ -36,5 +36,5 @@ WordLibrary - uses the RandomNumberGenerator module to create an index to random
 
 binary_to_BCD / binary_to_BCD_small - takes the binary values of WPM_integer and WPM_decimal and converts them to BCD
 
-
+PlayerActivity - Game logic that checks each letter being typed against word from WordLibrary module.
 
