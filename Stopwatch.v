@@ -21,9 +21,8 @@ module Stopwatch(
 reg [3:0] reg_d0, reg_d1, reg_d2, reg_d3; // Registers for individual digits
 reg [23:0] ticker; // 24-bit Ticker for 0.1 second intervals
 wire click;
-reg start_prev; // To track the previous state of start for edge detection
+reg start_prev;
 
-// Latched values for the time, to be used when the start signal is turned off
 reg [3:0] latched_minutes, latched_sec_high, latched_sec_low, latched_tenths;
 
 // Detect the negative edge of the start signal
@@ -55,13 +54,13 @@ end
 always @(posedge clock or posedge reset) begin
     if(reset) begin
         ticker <= 0;
-    end else if(ticker == 1) // Reset ticker at max value for 0.1 second intervals (100Mhz = 10000000)
+    end else if(ticker == 10000000) // (100Mhz = 10000000)
         ticker <= 0;
     else if(start)
         ticker <= ticker + 1;
 end
 
-assign click = (ticker == 1) ? 1'b1 : 1'b0; // (100Mhz = 10000000)
+assign click = (ticker == 10000000) ? 1'b1 : 1'b0; // (100Mhz = 10000000)
 
 // Time increment logic
 always @(posedge clock or posedge reset) begin
@@ -91,7 +90,6 @@ always @(posedge clock or posedge reset) begin
     end
 end
 
-// Output logic - conditionally assign latched values if start is low
 always @(posedge clock or posedge reset) begin
     if (reset) begin
         // Reset the outputs to 0
@@ -115,4 +113,3 @@ always @(posedge clock or posedge reset) begin
 end
 
 endmodule
-
