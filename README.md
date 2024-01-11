@@ -5,7 +5,7 @@ Typing Turmoil: Escape from Photonics
 
 Carlo Lanza, Ryan Malone, Arnouv Nayana, Frederick Grass
 
-We created a Type Racer game that a player can play until they mistyp any of the words. Following the mistake, the user can view the words per minute with which they typed at. 
+We created a Type Racer game that a player can play until they mistype any of the words. Following the mistake, the user can view the words per minute with which they typed at. 
 
 https://drive.google.com/file/d/1G5iRECuf5eI2jdjMtPDXkQWsnxvc_WjE/view?usp=sharing
 
